@@ -8,7 +8,7 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 
-def check_url(url: str, timeout: float, retries: int, slow_threshold: float) -> None:
+def check_url(url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects) -> None:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
@@ -17,7 +17,7 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float) -> 
         start = time.perf_counter()
 
         try:
-            response = requests.get(url, timeout=timeout)
+            response = requests.get(url, timeout=timeout, allow_redirects=follow_redirects)
             status_code = response.status_code
             
         except requests.exceptions.Timeout:
@@ -81,6 +81,7 @@ def main():
     timeout = 10
     retries = 1
     slow_threshold = None
+    follow_redirects = False
     args = sys.argv[1:]
 
     if "--timeout" in args:
@@ -125,10 +126,16 @@ def main():
 
         del args[index:index + 2]
 
+
+
+    if "--follow-redirects" in args:
+        follow_redirects = True
+        args.remove("--follow-redirects")
+
     urls = args
 
     for url in urls:
-        check_url(url, timeout, retries, slow_threshold)
+        check_url(url, timeout, retries, slow_threshold, follow_redirects)
 
 
 if __name__ == "__main__":
