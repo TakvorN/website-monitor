@@ -8,7 +8,7 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 
-def check_url(url: str, timeout: int, retries: int) -> None:
+def check_url(url: str, timeout: float, retries: int, slow_threshold: float) -> None:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
@@ -39,6 +39,7 @@ def check_url(url: str, timeout: int, retries: int) -> None:
         else:    
             end = time.perf_counter()
             duration_ms = (end - start) * 1000
+            is_slow = slow_threshold is not None and duration_ms > slow_threshold
 
             if 200 <= status_code < 300:
                 color = GREEN
@@ -52,6 +53,10 @@ def check_url(url: str, timeout: int, retries: int) -> None:
             else:
                 color = RED
                 label = "SERVER_ERROR"
+
+            if is_slow:
+                color = YELLOW
+                label = "SLOW"
 
             print(f"{url} -> {color}{label} {status_code}{RESET} ({duration_ms:.2f} ms)")
             return
@@ -75,6 +80,7 @@ def main():
 
     timeout = 10
     retries = 1
+    slow_threshold = None
     args = sys.argv[1:]
 
     if "--timeout" in args:
@@ -103,10 +109,26 @@ def main():
 
         del args[index:index + 2]
 
+
+    if "--slow" in args:
+        index = args.index("--slow")
+
+        try:
+            slow_threshold = float(args[index + 1])
+        except (IndexError, ValueError):
+            print("Error: --slow requires milliseconds value")
+            sys.exit(1)
+
+        if slow_threshold < 0:
+            print("Error: --slow must be >= 0")
+            sys.exit(1)
+
+        del args[index:index + 2]
+
     urls = args
 
     for url in urls:
-        check_url(url, timeout, retries)
+        check_url(url, timeout, retries, slow_threshold)
 
 
 if __name__ == "__main__":
