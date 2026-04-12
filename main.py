@@ -59,7 +59,7 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
                 label = "SLOW"
 
             print(f"{url} -> {color}{label} {status_code}{RESET} ({duration_ms:.2f} ms)")
-            return
+            return label
         
           
         if attempt == retries:
@@ -67,6 +67,7 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
             duration_ms = (end - start) * 1000
 
             print(f"{url} -> {RED}{label}{RESET} ({duration_ms:.2f} ms)")
+            return label
 
         else:
             time.sleep(0.5)
@@ -134,8 +135,32 @@ def main():
 
     urls = args
 
+    results = []
+
     for url in urls:
-        check_url(url, timeout, retries, slow_threshold, follow_redirects)
+        result = check_url(url, timeout, retries, slow_threshold, follow_redirects)
+        results.append(result)
+
+    print("\nSummary:")
+
+    from collections import Counter
+    counts = Counter(results)
+
+    print(f"OK: {counts['OK']}")
+    print(f"REDIRECT: {counts['REDIRECT']}")
+    print(f"CLIENT_ERROR: {counts['CLIENT_ERROR']}")
+    print(f"SERVER_ERROR: {counts['SERVER_ERROR']}")
+
+    errors = (
+        counts['TIMEOUT']
+        + counts['DNS_ERROR']
+        + counts['SSL_ERROR']
+        + counts['CONNECTION_ERROR']
+        + counts['ERROR']
+    )
+
+    print(f"ERRORS: {errors}")
+    print(f"TOTAL: {len(results)}")
 
 
 if __name__ == "__main__":
