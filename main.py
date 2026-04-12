@@ -1,6 +1,7 @@
 import sys
 import requests
 import time
+import argparse
 
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -75,65 +76,24 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <url>")
-        sys.exit(1)
 
-    timeout = 10
-    retries = 1
-    slow_threshold = None
-    follow_redirects = False
-    args = sys.argv[1:]
+    parser = argparse.ArgumentParser(
+        description="Simple website availability monitor"
+)
+    
+    parser.add_argument("urls", nargs="+")
+    parser.add_argument("--timeout", type=float, default=10)
+    parser.add_argument("--retries", type=int, default=1)
+    parser.add_argument("--slow", type=float, default=None)
+    parser.add_argument("--follow-redirects", action="store_true")
+    
+    args = parser.parse_args()
 
-    if "--timeout" in args:
-        index = args.index("--timeout")
-
-        if index + 1 >= len(args):
-            print("Error: --timeout requires value")
-            sys.exit(1)
-
-        timeout = float(args[index + 1])
-        del args[index:index+2]
-
-    if "--retries" in args:
-        index = args.index("--retries")
-
-        try:
-            retries = int(args[index + 1])
-
-            if retries < 1:
-                print("Error: --retries must be >= 1")
-                sys.exit(1)
-
-        except (IndexError, ValueError):
-            print("Error: --retries requires an integer")
-            sys.exit(1)
-
-        del args[index:index + 2]
-
-
-    if "--slow" in args:
-        index = args.index("--slow")
-
-        try:
-            slow_threshold = float(args[index + 1])
-        except (IndexError, ValueError):
-            print("Error: --slow requires milliseconds value")
-            sys.exit(1)
-
-        if slow_threshold < 0:
-            print("Error: --slow must be >= 0")
-            sys.exit(1)
-
-        del args[index:index + 2]
-
-
-
-    if "--follow-redirects" in args:
-        follow_redirects = True
-        args.remove("--follow-redirects")
-
-    urls = args
+    urls = args.urls
+    timeout = args.timeout
+    retries = args.retries
+    slow_threshold = args.slow
+    follow_redirects = args.follow_redirects
 
     results = []
 
