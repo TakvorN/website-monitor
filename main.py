@@ -63,7 +63,7 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
                 "url": url,
                 "label": label,
                 "status_code": status_code,
-                "duration_ms": duration_ms,
+                "duration_ms": round(duration_ms, 2),
             }
         
           
@@ -75,7 +75,7 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
                 "url": url,
                 "label": label,
                 "status_code": None,
-                "duration_ms": duration_ms,
+                "duration_ms": round(duration_ms, 2),
             }
 
         else:
@@ -113,6 +113,7 @@ def main():
     parser.add_argument("--retries", type=int, default=1)
     parser.add_argument("--slow", type=float, default=None)
     parser.add_argument("--follow-redirects", action="store_true")
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
     
     args = parser.parse_args()
 
@@ -121,15 +122,23 @@ def main():
     retries = args.retries
     slow_threshold = args.slow
     follow_redirects = args.follow_redirects
+    json_output = args.json
 
     results = []
+    all_results = []
 
     for url in urls:
         result = check_url(url, timeout, retries, slow_threshold, follow_redirects)
-        print_result(result)
+        all_results.append(result)
+
+        if not json_output:
+                print_result(result)
         results.append(result["label"])
 
-    print("\nSummary:")
+    if json_output:
+        print(json.dumps(all_results, indent=2))
+    else:
+        print("\nSummary:")
 
     from collections import Counter
     counts = Counter(results)
