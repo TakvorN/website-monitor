@@ -2,12 +2,12 @@ import sys
 import requests
 import time
 import argparse
+import json
 
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
-
 
 def check_url(url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects) -> None:
     if not url.startswith(("http://", "https://")):
@@ -59,20 +59,47 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
                 color = YELLOW
                 label = "SLOW"
 
-            print(f"{url} -> {color}{label} {status_code}{RESET} ({duration_ms:.2f} ms)")
-            return label
+            return {
+                "url": url,
+                "label": label,
+                "status_code": status_code,
+                "duration_ms": duration_ms,
+            }
         
           
         if attempt == retries:
             end = time.perf_counter()
             duration_ms = (end - start) * 1000
 
-            print(f"{url} -> {RED}{label}{RESET} ({duration_ms:.2f} ms)")
-            return label
+            return {
+                "url": url,
+                "label": label,
+                "status_code": None,
+                "duration_ms": duration_ms,
+            }
 
         else:
             time.sleep(0.5)
 
+def print_result(result):
+    url = result["url"]
+    label = result["label"]
+    status_code = result["status_code"]
+    duration_ms = result["duration_ms"]
+
+    if label == "OK":
+        color = GREEN
+    elif label == "REDIRECT":
+        color = YELLOW
+    elif label == "SLOW":
+        color = YELLOW
+    else:
+        color = RED
+
+    if status_code is not None:
+        print(f"{url} -> {color}{label} {status_code}{RESET} ({duration_ms:.2f} ms)")
+    else:
+        print(f"{url} -> {color}{label}{RESET} ({duration_ms:.2f} ms)")
 
 
 def main():
@@ -99,7 +126,8 @@ def main():
 
     for url in urls:
         result = check_url(url, timeout, retries, slow_threshold, follow_redirects)
-        results.append(result)
+        print_result(result)
+        results.append(result["label"])
 
     print("\nSummary:")
 
