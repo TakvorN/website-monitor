@@ -9,12 +9,13 @@ RED = "\033[91m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-def check_url(url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects) -> None:
+def check_url(url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects, json_output) -> None:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
     for attempt in range(1, retries + 1):
-        print(f"Checking {url} ({attempt}/{retries})...")
+        if not json_output:
+            print(f"Checking {url} ({attempt}/{retries})...")
         start = time.perf_counter()
 
         try:
@@ -124,24 +125,26 @@ def main():
     follow_redirects = args.follow_redirects
     json_output = args.json
 
-    results = []
     all_results = []
+    labels = []
 
     for url in urls:
-        result = check_url(url, timeout, retries, slow_threshold, follow_redirects)
+        result = check_url(url, timeout, retries, slow_threshold, follow_redirects, json_output)
+
         all_results.append(result)
+        labels.append(result["label"])
 
         if not json_output:
-                print_result(result)
-        results.append(result["label"])
+            print_result(result)
 
     if json_output:
         print(json.dumps(all_results, indent=2))
-    else:
-        print("\nSummary:")
+        return
+    
+    print("\nSummary:")
 
     from collections import Counter
-    counts = Counter(results)
+    counts = Counter(labels)
 
     print(f"OK: {counts['OK']}")
     print(f"REDIRECT: {counts['REDIRECT']}")
@@ -157,7 +160,7 @@ def main():
     )
 
     print(f"ERRORS: {errors}")
-    print(f"TOTAL: {len(results)}")
+    print(f"TOTAL: {len(labels)}")
 
 
 if __name__ == "__main__":
