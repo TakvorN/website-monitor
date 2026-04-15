@@ -110,16 +110,38 @@ def main():
         description="Simple website availability monitor"
 )
     
-    parser.add_argument("urls", nargs="+")
+    parser.add_argument("urls", nargs="*")
     parser.add_argument("--timeout", type=float, default=10)
     parser.add_argument("--retries", type=int, default=1)
     parser.add_argument("--slow", type=float, default=None)
     parser.add_argument("--follow-redirects", action="store_true")
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
+    parser.add_argument("--file", help="Read URLs from file (one per line)")
     
     args = parser.parse_args()
 
-    urls = args.urls
+    urls = []
+
+    if args.urls:
+        urls.extend(args.urls)
+
+    if args.file:
+        with open(args.file) as f:
+            for line in f:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                if line.startswith("#"):
+                    continue
+
+                urls.append(line)
+
+    if not urls:
+        print("No URLs provided")
+        sys.exit(2)
+
     timeout = args.timeout
     retries = args.retries
     slow_threshold = args.slow
@@ -127,13 +149,11 @@ def main():
     json_output = args.json
 
     all_results = []
-    labels = []
 
     for url in urls:
         result = check_url(url, timeout, retries, slow_threshold, follow_redirects, json_output)
 
         all_results.append(result)
-        labels.append(result["label"])
 
         if not json_output:
             print_result(result)
@@ -145,8 +165,28 @@ def main():
 
     if json_output:
         print(json.dumps(all_results, indent=2))
-        return
     
+    else:
+        print("\nSummary:")
+
+        from collections import Counter
+        counts = Counter(result["label"] for result in all_results)
+
+        print(f"OK: {counts['OK']}")
+        print(f"REDIRECT: {counts['REDIRECT']}")
+        print(f"CLIENT_ERROR: {counts['CLIENT_ERROR']}")
+        print(f"SERVER_ERROR: {counts['SERVER_ERROR']}")
+
+        errors = (
+            counts['TIMEOUT']
+            + counts['DNS_ERROR']
+            + counts['SSL_ERROR']
+            + counts['CONNECTION_ERROR']
+            + counts['ERROR']
+        )
+
+        print(f"ERRORS: {errors}")
+        print(f"TOTAL: {len(all_results)}")
 
 
     if has_failure:
