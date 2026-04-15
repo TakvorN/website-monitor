@@ -3,6 +3,7 @@ import requests
 import time
 import argparse
 import json
+import sys
 
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -137,30 +138,22 @@ def main():
         if not json_output:
             print_result(result)
 
+    has_failure = any(
+    result["label"] not in ("OK", "REDIRECT")
+    for result in all_results
+)
+
     if json_output:
         print(json.dumps(all_results, indent=2))
         return
     
-    print("\nSummary:")
 
-    from collections import Counter
-    counts = Counter(labels)
 
-    print(f"OK: {counts['OK']}")
-    print(f"REDIRECT: {counts['REDIRECT']}")
-    print(f"CLIENT_ERROR: {counts['CLIENT_ERROR']}")
-    print(f"SERVER_ERROR: {counts['SERVER_ERROR']}")
+    if has_failure:
+        sys.exit(1)
 
-    errors = (
-        counts['TIMEOUT']
-        + counts['DNS_ERROR']
-        + counts['SSL_ERROR']
-        + counts['CONNECTION_ERROR']
-        + counts['ERROR']
-    )
-
-    print(f"ERRORS: {errors}")
-    print(f"TOTAL: {len(labels)}")
+    else:
+        sys.exit(0)
 
 
 if __name__ == "__main__":
