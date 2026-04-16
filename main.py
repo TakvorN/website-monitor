@@ -10,12 +10,12 @@ RED = "\033[91m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-def check_url(url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects, json_output) -> None:
+def check_url(url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects, json_output, quiet) -> None:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
     for attempt in range(1, retries + 1):
-        if not json_output:
+        if not json_output and not quiet:
             print(f"Checking {url} ({attempt}/{retries})...")
         start = time.perf_counter()
 
@@ -83,11 +83,15 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
         else:
             time.sleep(0.5)
 
-def print_result(result):
+def print_result(result, quiet=False):
     url = result["url"]
     label = result["label"]
     status_code = result["status_code"]
     duration_ms = result["duration_ms"]
+
+    if quiet:
+        print(result["label"])
+        return
 
     if label == "OK":
         color = GREEN
@@ -117,6 +121,7 @@ def main():
     parser.add_argument("--follow-redirects", action="store_true")
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     parser.add_argument("--file", help="Read URLs from file (one per line)")
+    parser.add_argument("--quiet", action="store_true", help="Print only result labels")
     
     args = parser.parse_args()
 
@@ -151,12 +156,12 @@ def main():
     all_results = []
 
     for url in urls:
-        result = check_url(url, timeout, retries, slow_threshold, follow_redirects, json_output)
+        result = check_url(url, timeout, retries, slow_threshold, follow_redirects, json_output, args.quiet)
 
         all_results.append(result)
 
         if not json_output:
-            print_result(result)
+            print_result(result, quiet=args.quiet)
 
     has_failure = any(
     result["label"] not in ("OK", "REDIRECT")
@@ -165,8 +170,8 @@ def main():
 
     if json_output:
         print(json.dumps(all_results, indent=2))
-    
-    else:
+
+    elif not args.quiet:
         print("\nSummary:")
 
         from collections import Counter
