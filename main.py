@@ -122,6 +122,7 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     parser.add_argument("--file", help="Read URLs from file (one per line)")
     parser.add_argument("--quiet", action="store_true", help="Print only result labels")
+    parser.add_argument("--fail-fast", action="store_true", help="Stop on first failure")
     
     args = parser.parse_args()
 
@@ -162,6 +163,9 @@ def main():
 
         if not json_output:
             print_result(result, quiet=args.quiet)
+
+        if args.fail_fast and result["label"] not in ("OK", "REDIRECT"):
+            break
 
     has_failure = any(
     result["label"] not in ("OK", "REDIRECT")
