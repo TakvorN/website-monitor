@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--file", help="Read URLs from file (one per line)")
     parser.add_argument("--quiet", action="store_true", help="Print only result labels")
     parser.add_argument("--fail-fast", action="store_true", help="Stop on first failure")
+    parser.add_argument("--output", help="Write results to JSON file")
     
     args = parser.parse_args()
 
@@ -97,6 +98,10 @@ def main():
 
         print(f"ERRORS: {errors}")
         print(f"TOTAL: {len(all_results)}")
+
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(all_results, f, indent=2)
 
 
     if has_failure:
