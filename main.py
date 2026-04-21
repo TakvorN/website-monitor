@@ -25,10 +25,16 @@ def main():
     parser.add_argument("--quiet", action="store_true", help="Print only result labels")
     parser.add_argument("--fail-fast", action="store_true", help="Stop on first failure")
     parser.add_argument("--output", help="Write results to JSON file")
+    parser.add_argument("--user-agent", help="Custom User-Agent header")
     
     args = parser.parse_args()
 
     urls = []
+    user_agent = args.user_agent or (
+    "Mozilla/5.0 (X11; Linux x86_64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
+)
 
     if args.urls:
         urls.extend(args.urls)
@@ -59,7 +65,7 @@ def main():
     all_results = []
 
     for url in urls:
-        result = check_url(url, timeout, retries, slow_threshold, follow_redirects, json_output, args.quiet)
+        result = check_url(url, timeout, retries, slow_threshold, follow_redirects, json_output, args.quiet, user_agent)
 
         all_results.append(result)
 
