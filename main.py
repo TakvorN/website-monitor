@@ -7,6 +7,7 @@ import sys
 
 from checker import check_url
 from output import print_result
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def main():
@@ -26,8 +27,18 @@ def main():
     parser.add_argument("--fail-fast", action="store_true", help="Stop on first failure")
     parser.add_argument("--output", help="Write results to JSON file")
     parser.add_argument("--user-agent", help="Custom User-Agent header")
+    parser.add_argument("--workers", type=int, default=1, help="Number of concurrent workers (default: 1)")
     
     args = parser.parse_args()
+
+    if args.workers < 1:
+        print("WARNING: --workers must be >= 1")
+        sys.exit(2)
+
+    workers = args.workers
+
+    if workers > 1 and args.fail_fast:
+        print("WARNING: --fail-fast ignored when using --workers > 1")
 
     urls = []
     user_agent = args.user_agent or (
@@ -64,16 +75,50 @@ def main():
 
     all_results = []
 
-    for url in urls:
-        result = check_url(url, timeout, retries, slow_threshold, follow_redirects, json_output, args.quiet, user_agent)
+    if workers == 1:
+        for url in urls:
+            result = check_url(
+            url,
+            timeout,
+            retries,
+            slow_threshold,
+            follow_redirects,
+            json_output,
+            args.quiet,
+            user_agent
+        )
 
-        all_results.append(result)
+            all_results.append(result)
 
-        if not json_output:
-            print_result(result, quiet=args.quiet)
+            if not json_output:
+                print_result(result, quiet=args.quiet)
 
-        if args.fail_fast and result["label"] not in ("OK", "REDIRECT"):
-            break
+            if args.fail_fast and result["label"] not in ("OK", "REDIRECT"):
+                break
+
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(
+                    check_url,
+                    url,
+                    timeout,
+                    retries,
+                    slow_threshold,
+                    follow_redirects,
+                    json_output,
+                    args.quiet,
+                    user_agent
+                ): url
+                for url in urls
+        }
+
+            for future in as_completed(futures):
+                result = future.result()
+                all_results.append(result)
+
+                if not json_output:
+                    print_result(result, quiet=args.quiet)
 
     has_failure = any(
     result["label"] not in ("OK", "REDIRECT")
