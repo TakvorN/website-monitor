@@ -1,9 +1,6 @@
 import sys
-import requests
-import time
 import argparse
 import json
-import sys
 
 from checker import check_url
 from output import print_result
