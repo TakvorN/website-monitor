@@ -5,6 +5,7 @@ import json
 from checker import check_url
 from output import print_result
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import requests
 
 
 def main():
@@ -27,6 +28,8 @@ def main():
     parser.add_argument("--workers", type=int, default=1, help="Number of concurrent workers (default: 1)")
     
     args = parser.parse_args()
+
+    session = requests.Session()
 
     if args.workers < 1:
         print("WARNING: --workers must be >= 1")
@@ -75,6 +78,7 @@ def main():
     if workers == 1:
         for url in urls:
             result = check_url(
+            session,
             url,
             timeout,
             retries,
@@ -98,6 +102,7 @@ def main():
             futures = {
                 executor.submit(
                     check_url,
+                    session,
                     url,
                     timeout,
                     retries,

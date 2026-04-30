@@ -2,7 +2,7 @@ import requests
 import time
 
 
-def check_url(url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects, json_output, quiet, user_agent) -> None:
+def check_url(session, url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects, json_output, quiet, user_agent) -> None:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
@@ -18,7 +18,7 @@ def check_url(url: str, timeout: float, retries: int, slow_threshold: float, fol
     "Accept-Language": "en-US,en;q=0.5",
     "Connection": "keep-alive",
 }
-            response = requests.get(url, timeout=timeout, allow_redirects=follow_redirects, headers=headers)
+            response = session.get(url, timeout=timeout, allow_redirects=follow_redirects, headers=headers)
             status_code = response.status_code
             
         except requests.exceptions.Timeout:
