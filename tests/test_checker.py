@@ -1,0 +1,80 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from checker import check_url
+
+
+class MockResponse:
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+
+class MockSession:
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+    def get(self, *args, **kwargs):
+        return MockResponse(self.status_code)
+    
+
+
+def test_check_url_ok():
+    session = MockSession(200)
+
+    result = check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test"
+    )
+
+    assert result["label"] == "OK"
+    assert result["status_code"] == 200
+
+
+def test_check_url_redirect():
+    session = MockSession(301)
+
+    result = check_url(session, "https://example.com", 5, 1, None, False, False, True, "test")
+
+    assert result["label"] == "REDIRECT"
+
+
+def test_check_url_client_error():
+    session = MockSession(404)
+
+    result = check_url(session, "https://example.com", 5, 1, None, False, False, True, "test")
+
+    assert result["label"] == "CLIENT_ERROR"
+
+
+def test_check_url_server_error():
+    session = MockSession(500)
+
+    result = check_url(session, "https://example.com", 5, 1, None, False, False, True, "test")
+
+    assert result["label"] == "SERVER_ERROR"
+
+
+import requests
+
+def test_check_url_timeout():
+    class TimeoutSession:
+        def get(self, *args, **kwargs):
+            raise requests.exceptions.Timeout()
+
+    result = check_url(
+        TimeoutSession(),
+        "https://example.com",
+        5, 1, None, False, False, True, "test"
+    )
+
+    assert result["label"] == "TIMEOUT"
+    assert result["status_code"] is None
