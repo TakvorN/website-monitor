@@ -17,6 +17,25 @@ class MockSession:
 
     def get(self, *args, **kwargs):
         return MockResponse(self.status_code)
+
+
+
+class SequenceSession:
+    def __init__(self, responses):
+        self.responses = responses  # list of responses/exceptions
+        self.call_count = 0
+
+    def get(self, *args, **kwargs):
+        if self.call_count >= len(self.responses):
+            raise Exception("No more responses configured")
+
+        response = self.responses[self.call_count]
+        self.call_count += 1
+
+        if isinstance(response, Exception):
+            raise response
+
+        return MockResponse(response)
     
 
 
@@ -78,3 +97,69 @@ def test_check_url_timeout():
 
     assert result["label"] == "TIMEOUT"
     assert result["status_code"] is None
+
+
+
+import requests
+
+def test_check_url_retries_then_success():
+    session = SequenceSession([
+        requests.exceptions.Timeout(),
+        requests.exceptions.Timeout(),
+        200
+    ])
+
+    result = check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=3,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test"
+    )
+
+    assert result["label"] == "OK"
+    assert session.call_count == 3
+
+
+def test_check_url_all_retries_fail():
+    session = SequenceSession([
+        requests.exceptions.Timeout(),
+        requests.exceptions.Timeout(),
+        requests.exceptions.Timeout()
+    ])
+
+    result = check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=3,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test"
+    )
+
+    assert result["label"] == "TIMEOUT"
+    assert result["status_code"] is None
+    assert session.call_count == 3
+
+
+def test_check_url_retry_once_then_success():
+    session = SequenceSession([
+        requests.exceptions.ConnectionError(),
+        200
+    ])
+
+    result = check_url(
+        session,
+        "https://example.com",
+        5, 2, None, False, False, True, "test"
+    )
+
+    assert result["label"] == "OK"
+    assert session.call_count == 2
