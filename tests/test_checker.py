@@ -189,3 +189,21 @@ def test_check_url_slow_response(monkeypatch):
     )
 
     assert result["label"] == "SLOW"
+
+
+def test_check_url_adds_https_prefix():
+    session = MockSession(200)
+
+    result = check_url(
+        session,
+        "example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test"
+    )
+
+    assert result["url"] == "https://example.com"
