@@ -163,3 +163,29 @@ def test_check_url_retry_once_then_success():
 
     assert result["label"] == "OK"
     assert session.call_count == 2
+
+
+
+def test_check_url_slow_response(monkeypatch):
+    times = [1.0, 3.5]
+
+    def fake_perf_counter():
+        return times.pop(0)
+
+    monkeypatch.setattr("checker.time.perf_counter", fake_perf_counter)
+
+    session = MockSession(200)
+
+    result = check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=1000,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test"
+    )
+
+    assert result["label"] == "SLOW"
