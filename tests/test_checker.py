@@ -1,5 +1,6 @@
 import sys
 import os
+import requests
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -36,6 +37,25 @@ class SequenceSession:
             raise response
 
         return MockResponse(response)
+    
+
+
+class RecordingSession:
+    def __init__(self):
+        self.allow_redirects = None
+
+    def get(self, *args, **kwargs):
+        self.allow_redirects = kwargs["allow_redirects"]
+        return MockResponse(200)
+    
+
+class UserAgentRecordingSession:
+    def __init__(self):
+        self.user_agent = None
+
+    def get(self, *args, **kwargs):
+        self.user_agent = kwargs["headers"]["User-Agent"]
+        return MockResponse(200)
     
 
 
@@ -82,7 +102,6 @@ def test_check_url_server_error():
     assert result["label"] == "SERVER_ERROR"
 
 
-import requests
 
 def test_check_url_timeout():
     class TimeoutSession:
@@ -99,8 +118,6 @@ def test_check_url_timeout():
     assert result["status_code"] is None
 
 
-
-import requests
 
 def test_check_url_retries_then_success():
     session = SequenceSession([
@@ -207,3 +224,40 @@ def test_check_url_adds_https_prefix():
     )
 
     assert result["url"] == "https://example.com"
+
+
+
+def test_check_url_passes_follow_redirects_flag():
+    session = RecordingSession()
+
+    check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=True,
+        json_output=False,
+        quiet=True,
+        user_agent="test"
+    )
+
+    assert session.allow_redirects is True
+
+
+def test_check_url_passes_custom_user_agent():
+    session = UserAgentRecordingSession()
+
+    check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="MyCustomAgent/1.0"
+    )
+
+    assert session.user_agent == "MyCustomAgent/1.0"
