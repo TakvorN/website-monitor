@@ -1,10 +1,5 @@
-import sys
-import os
 import requests
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from checker import check_url
+from website_monitor.checker import check_url
 
 
 class MockResponse:
@@ -189,7 +184,7 @@ def test_check_url_slow_response(monkeypatch):
     def fake_perf_counter():
         return times.pop(0)
 
-    monkeypatch.setattr("checker.time.perf_counter", fake_perf_counter)
+    monkeypatch.setattr("website_monitor.checker.time.perf_counter", fake_perf_counter)
 
     session = MockSession(200)
 

@@ -1,11 +1,7 @@
 import sys
-import os
 import pytest
 import json
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from main import main
+from website_monitor.main import main
 
 
 def test_main_no_urls_exits_with_code_2(monkeypatch, capsys):
@@ -29,7 +25,7 @@ def test_main_success_exit_code_zero(monkeypatch):
             "duration_ms": 123.45,
         }
 
-    monkeypatch.setattr("main.check_url", fake_check_url)
+    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
     monkeypatch.setattr(sys, "argv", ["main.py", "example.com"])
 
     with pytest.raises(SystemExit) as exc:
@@ -59,7 +55,7 @@ def test_main_multiple_urls(monkeypatch, capsys):
     def fake_check_url(*args, **kwargs):
         return results.pop(0)
 
-    monkeypatch.setattr("main.check_url", fake_check_url)
+    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
 
     monkeypatch.setattr(
         sys,
@@ -88,7 +84,7 @@ def test_main_json_output(monkeypatch, capsys):
             "duration_ms": 123.45,
         }
 
-    monkeypatch.setattr("main.check_url", fake_check_url)
+    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
     monkeypatch.setattr(sys, "argv", ["main.py", "example.com", "--json"])
 
     with pytest.raises(SystemExit) as exc:
@@ -121,7 +117,7 @@ example.com
 
 """)
 
-    monkeypatch.setattr("main.check_url", fake_check_url)
+    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
 
     monkeypatch.setattr(
         sys,
@@ -145,7 +141,7 @@ def test_main_quiet_mode_outputs_only_label(monkeypatch, capsys):
             "duration_ms": 123.45,
         }
 
-    monkeypatch.setattr("main.check_url", fake_check_url)
+    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
     monkeypatch.setattr(sys, "argv", ["main.py", "example.com", "--quiet"])
 
     with pytest.raises(SystemExit) as exc:
@@ -175,7 +171,7 @@ def test_main_fail_fast_stops_after_first_failure(monkeypatch):
             "duration_ms": 100.0,
         }
 
-    monkeypatch.setattr("main.check_url", fake_check_url)
+    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -216,8 +212,8 @@ def test_main_uses_threadpool_when_workers_gt_one(monkeypatch):
 
             return FakeFuture()
 
-    monkeypatch.setattr("main.ThreadPoolExecutor", FakeExecutor)
-    monkeypatch.setattr("main.as_completed", lambda futures: futures)
+    monkeypatch.setattr("website_monitor.main.ThreadPoolExecutor", FakeExecutor)
+    monkeypatch.setattr("website_monitor.main.as_completed", lambda futures: futures)
     monkeypatch.setattr(
         sys,
         "argv",

@@ -2,8 +2,8 @@ import sys
 import argparse
 import json
 
-from checker import check_url
-from output import print_result
+from .checker import check_url
+from .output import print_result
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 

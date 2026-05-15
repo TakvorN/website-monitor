@@ -1,4 +1,4 @@
-from output import print_result
+from website_monitor.output import print_result
 
 
 def test_print_result_quiet(capsys):

@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "website-monitor"
+version = "0.1.0"
+description = "CLI website availability monitor"
+requires-python = ">=3.10"
+
+[project.scripts]
+website-monitor = "website_monitor.main:main"
