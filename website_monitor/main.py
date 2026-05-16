@@ -1,34 +1,69 @@
-import sys
 import argparse
 import json
+import sys
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import requests
 
 from .checker import check_url
 from .output import print_result
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import requests
 
 
-def main():
+DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
+)
 
+
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Simple website availability monitor"
-)
-    
+    )
+
     parser.add_argument("urls", nargs="*")
     parser.add_argument("--timeout", type=float, default=10)
     parser.add_argument("--retries", type=int, default=1)
     parser.add_argument("--slow", type=float, default=None)
     parser.add_argument("--follow-redirects", action="store_true")
-    parser.add_argument("--json", action="store_true", help="Output results as JSON")
-    parser.add_argument("--file", help="Read URLs from file (one per line)")
-    parser.add_argument("--quiet", action="store_true", help="Print only result labels")
-    parser.add_argument("--fail-fast", action="store_true", help="Stop on first failure")
-    parser.add_argument("--output", help="Write results to JSON file")
-    parser.add_argument("--user-agent", help="Custom User-Agent header")
-    parser.add_argument("--workers", type=int, default=1, help="Number of concurrent workers (default: 1)")
-    
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output results as JSON",
+    )
+    parser.add_argument(
+        "--file",
+        help="Read URLs from file (one per line)",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Print only result labels",
+    )
+    parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Stop on first failure",
+    )
+    parser.add_argument(
+        "--output",
+        help="Write results to JSON file",
+    )
+    parser.add_argument(
+        "--user-agent",
+        help="Custom User-Agent header",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of concurrent workers (default: 1)",
+    )
+
     args = parser.parse_args()
 
+    # Reuse HTTP connections instead of opening a new one per request.
     session = requests.Session()
 
     if args.workers < 1:
@@ -41,11 +76,7 @@ def main():
         print("WARNING: --fail-fast ignored when using --workers > 1")
 
     urls = []
-    user_agent = args.user_agent or (
-    "Mozilla/5.0 (X11; Linux x86_64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36"
-)
+    user_agent = args.user_agent or DEFAULT_USER_AGENT
 
     if args.urls:
         urls.extend(args.urls)
@@ -78,16 +109,16 @@ def main():
     if workers == 1:
         for url in urls:
             result = check_url(
-            session,
-            url,
-            timeout,
-            retries,
-            slow_threshold,
-            follow_redirects,
-            json_output,
-            args.quiet,
-            user_agent
-        )
+                session,
+                url,
+                timeout,
+                retries,
+                slow_threshold,
+                follow_redirects,
+                json_output,
+                args.quiet,
+                user_agent,
+            )
 
             all_results.append(result)
 
@@ -98,6 +129,7 @@ def main():
                 break
 
     else:
+        # Threading helps for I/O-bound HTTP requests.
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(
@@ -110,10 +142,10 @@ def main():
                     follow_redirects,
                     json_output,
                     args.quiet,
-                    user_agent
+                    user_agent,
                 ): url
                 for url in urls
-        }
+            }
 
             for future in as_completed(futures):
                 result = future.result()
@@ -123,9 +155,9 @@ def main():
                     print_result(result, quiet=args.quiet)
 
     has_failure = any(
-    result["label"] not in ("OK", "REDIRECT")
-    for result in all_results
-)
+        result["label"] not in ("OK", "REDIRECT")
+        for result in all_results
+    )
 
     if json_output:
         print(json.dumps(all_results, indent=2))
@@ -133,7 +165,6 @@ def main():
     elif not args.quiet:
         print("\nSummary:")
 
-        from collections import Counter
         counts = Counter(result["label"] for result in all_results)
 
         print(f"OK: {counts['OK']}")
@@ -142,11 +173,11 @@ def main():
         print(f"SERVER_ERROR: {counts['SERVER_ERROR']}")
 
         errors = (
-            counts['TIMEOUT']
-            + counts['DNS_ERROR']
-            + counts['SSL_ERROR']
-            + counts['CONNECTION_ERROR']
-            + counts['ERROR']
+            counts["TIMEOUT"]
+            + counts["DNS_ERROR"]
+            + counts["SSL_ERROR"]
+            + counts["CONNECTION_ERROR"]
+            + counts["ERROR"]
         )
 
         print(f"ERRORS: {errors}")
@@ -156,12 +187,10 @@ def main():
         with open(args.output, "w") as f:
             json.dump(all_results, f, indent=2)
 
-
     if has_failure:
         sys.exit(1)
 
-    else:
-        sys.exit(0)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

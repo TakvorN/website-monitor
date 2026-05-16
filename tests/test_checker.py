@@ -1,4 +1,5 @@
 import requests
+
 from website_monitor.checker import check_url
 
 
@@ -15,10 +16,11 @@ class MockSession:
         return MockResponse(self.status_code)
 
 
-
 class SequenceSession:
+    """Mock session that returns configured responses in sequence."""
+
     def __init__(self, responses):
-        self.responses = responses  # list of responses/exceptions
+        self.responses = responses  # list of responses or exceptions
         self.call_count = 0
 
     def get(self, *args, **kwargs):
@@ -32,26 +34,28 @@ class SequenceSession:
             raise response
 
         return MockResponse(response)
-    
 
 
 class RecordingSession:
+    """Mock session that records allow_redirects argument."""
+
     def __init__(self):
         self.allow_redirects = None
 
     def get(self, *args, **kwargs):
         self.allow_redirects = kwargs["allow_redirects"]
         return MockResponse(200)
-    
+
 
 class UserAgentRecordingSession:
+    """Mock session that records User-Agent header."""
+
     def __init__(self):
         self.user_agent = None
 
     def get(self, *args, **kwargs):
         self.user_agent = kwargs["headers"]["User-Agent"]
         return MockResponse(200)
-    
 
 
 def test_check_url_ok():
@@ -66,7 +70,7 @@ def test_check_url_ok():
         follow_redirects=False,
         json_output=False,
         quiet=True,
-        user_agent="test"
+        user_agent="test",
     )
 
     assert result["label"] == "OK"
@@ -76,7 +80,17 @@ def test_check_url_ok():
 def test_check_url_redirect():
     session = MockSession(301)
 
-    result = check_url(session, "https://example.com", 5, 1, None, False, False, True, "test")
+    result = check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test",
+    )
 
     assert result["label"] == "REDIRECT"
 
@@ -84,7 +98,17 @@ def test_check_url_redirect():
 def test_check_url_client_error():
     session = MockSession(404)
 
-    result = check_url(session, "https://example.com", 5, 1, None, False, False, True, "test")
+    result = check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test",
+    )
 
     assert result["label"] == "CLIENT_ERROR"
 
@@ -92,10 +116,19 @@ def test_check_url_client_error():
 def test_check_url_server_error():
     session = MockSession(500)
 
-    result = check_url(session, "https://example.com", 5, 1, None, False, False, True, "test")
+    result = check_url(
+        session,
+        "https://example.com",
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test",
+    )
 
     assert result["label"] == "SERVER_ERROR"
-
 
 
 def test_check_url_timeout():
@@ -106,20 +139,27 @@ def test_check_url_timeout():
     result = check_url(
         TimeoutSession(),
         "https://example.com",
-        5, 1, None, False, False, True, "test"
+        timeout=5,
+        retries=1,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test",
     )
 
     assert result["label"] == "TIMEOUT"
     assert result["status_code"] is None
 
 
-
 def test_check_url_retries_then_success():
-    session = SequenceSession([
-        requests.exceptions.Timeout(),
-        requests.exceptions.Timeout(),
-        200
-    ])
+    session = SequenceSession(
+        [
+            requests.exceptions.Timeout(),
+            requests.exceptions.Timeout(),
+            200,
+        ]
+    )
 
     result = check_url(
         session,
@@ -130,7 +170,7 @@ def test_check_url_retries_then_success():
         follow_redirects=False,
         json_output=False,
         quiet=True,
-        user_agent="test"
+        user_agent="test",
     )
 
     assert result["label"] == "OK"
@@ -138,11 +178,13 @@ def test_check_url_retries_then_success():
 
 
 def test_check_url_all_retries_fail():
-    session = SequenceSession([
-        requests.exceptions.Timeout(),
-        requests.exceptions.Timeout(),
-        requests.exceptions.Timeout()
-    ])
+    session = SequenceSession(
+        [
+            requests.exceptions.Timeout(),
+            requests.exceptions.Timeout(),
+            requests.exceptions.Timeout(),
+        ]
+    )
 
     result = check_url(
         session,
@@ -153,7 +195,7 @@ def test_check_url_all_retries_fail():
         follow_redirects=False,
         json_output=False,
         quiet=True,
-        user_agent="test"
+        user_agent="test",
     )
 
     assert result["label"] == "TIMEOUT"
@@ -162,20 +204,27 @@ def test_check_url_all_retries_fail():
 
 
 def test_check_url_retry_once_then_success():
-    session = SequenceSession([
-        requests.exceptions.ConnectionError(),
-        200
-    ])
+    session = SequenceSession(
+        [
+            requests.exceptions.ConnectionError(),
+            200,
+        ]
+    )
 
     result = check_url(
         session,
         "https://example.com",
-        5, 2, None, False, False, True, "test"
+        timeout=5,
+        retries=2,
+        slow_threshold=None,
+        follow_redirects=False,
+        json_output=False,
+        quiet=True,
+        user_agent="test",
     )
 
     assert result["label"] == "OK"
     assert session.call_count == 2
-
 
 
 def test_check_url_slow_response(monkeypatch):
@@ -184,7 +233,10 @@ def test_check_url_slow_response(monkeypatch):
     def fake_perf_counter():
         return times.pop(0)
 
-    monkeypatch.setattr("website_monitor.checker.time.perf_counter", fake_perf_counter)
+    monkeypatch.setattr(
+        "website_monitor.checker.time.perf_counter",
+        fake_perf_counter,
+    )
 
     session = MockSession(200)
 
@@ -197,7 +249,7 @@ def test_check_url_slow_response(monkeypatch):
         follow_redirects=False,
         json_output=False,
         quiet=True,
-        user_agent="test"
+        user_agent="test",
     )
 
     assert result["label"] == "SLOW"
@@ -215,11 +267,10 @@ def test_check_url_adds_https_prefix():
         follow_redirects=False,
         json_output=False,
         quiet=True,
-        user_agent="test"
+        user_agent="test",
     )
 
     assert result["url"] == "https://example.com"
-
 
 
 def test_check_url_passes_follow_redirects_flag():
@@ -234,7 +285,7 @@ def test_check_url_passes_follow_redirects_flag():
         follow_redirects=True,
         json_output=False,
         quiet=True,
-        user_agent="test"
+        user_agent="test",
     )
 
     assert session.allow_redirects is True
@@ -252,7 +303,7 @@ def test_check_url_passes_custom_user_agent():
         follow_redirects=False,
         json_output=False,
         quiet=True,
-        user_agent="MyCustomAgent/1.0"
+        user_agent="MyCustomAgent/1.0",
     )
 
     assert session.user_agent == "MyCustomAgent/1.0"

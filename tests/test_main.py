@@ -1,10 +1,13 @@
-import sys
-import pytest
 import json
+import sys
+
+import pytest
+
 from website_monitor.main import main
 
 
 def test_main_no_urls_exits_with_code_2(monkeypatch, capsys):
+    # Replace real CLI args with simulated terminal input.
     monkeypatch.setattr(sys, "argv", ["main.py"])
 
     with pytest.raises(SystemExit) as exc:
@@ -25,15 +28,16 @@ def test_main_success_exit_code_zero(monkeypatch):
             "duration_ms": 123.45,
         }
 
-    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
+    monkeypatch.setattr(
+        "website_monitor.main.check_url",
+        fake_check_url,
+    )
     monkeypatch.setattr(sys, "argv", ["main.py", "example.com"])
 
     with pytest.raises(SystemExit) as exc:
         main()
 
-
     assert exc.value.code == 0
-
 
 
 def test_main_multiple_urls(monkeypatch, capsys):
@@ -55,12 +59,15 @@ def test_main_multiple_urls(monkeypatch, capsys):
     def fake_check_url(*args, **kwargs):
         return results.pop(0)
 
-    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
+    monkeypatch.setattr(
+        "website_monitor.main.check_url",
+        fake_check_url,
+    )
 
     monkeypatch.setattr(
         sys,
         "argv",
-        ["main.py", "example.com", "google.com"]
+        ["main.py", "example.com", "google.com"],
     )
 
     with pytest.raises(SystemExit) as exc:
@@ -74,7 +81,6 @@ def test_main_multiple_urls(monkeypatch, capsys):
     assert "TOTAL: 2" in captured.out
 
 
-
 def test_main_json_output(monkeypatch, capsys):
     def fake_check_url(*args, **kwargs):
         return {
@@ -84,12 +90,18 @@ def test_main_json_output(monkeypatch, capsys):
             "duration_ms": 123.45,
         }
 
-    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
-    monkeypatch.setattr(sys, "argv", ["main.py", "example.com", "--json"])
+    monkeypatch.setattr(
+        "website_monitor.main.check_url",
+        fake_check_url,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["main.py", "example.com", "--json"],
+    )
 
     with pytest.raises(SystemExit) as exc:
         main()
-
 
     captured = capsys.readouterr()
     data = json.loads(captured.out)
@@ -98,7 +110,6 @@ def test_main_json_output(monkeypatch, capsys):
     assert isinstance(data, list)
     assert data[0]["label"] == "OK"
     assert "Summary:" not in captured.out
-
 
 
 def test_main_reads_urls_from_file(monkeypatch, tmp_path):
@@ -111,25 +122,29 @@ def test_main_reads_urls_from_file(monkeypatch, tmp_path):
         }
 
     input_file = tmp_path / "urls.txt"
-    input_file.write_text("""
+    input_file.write_text(
+        """
 # this is a comment
 example.com
 
-""")
+"""
+    )
 
-    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
+    monkeypatch.setattr(
+        "website_monitor.main.check_url",
+        fake_check_url,
+    )
 
     monkeypatch.setattr(
         sys,
         "argv",
-        ["main.py", "--file", str(input_file)]
+        ["main.py", "--file", str(input_file)],
     )
 
     with pytest.raises(SystemExit) as exc:
         main()
 
     assert exc.value.code == 0
-
 
 
 def test_main_quiet_mode_outputs_only_label(monkeypatch, capsys):
@@ -141,12 +156,18 @@ def test_main_quiet_mode_outputs_only_label(monkeypatch, capsys):
             "duration_ms": 123.45,
         }
 
-    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
-    monkeypatch.setattr(sys, "argv", ["main.py", "example.com", "--quiet"])
+    monkeypatch.setattr(
+        "website_monitor.main.check_url",
+        fake_check_url,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["main.py", "example.com", "--quiet"],
+    )
 
     with pytest.raises(SystemExit) as exc:
         main()
-
 
     captured = capsys.readouterr()
 
@@ -154,7 +175,6 @@ def test_main_quiet_mode_outputs_only_label(monkeypatch, capsys):
     assert captured.out.strip() == "OK"
     assert "https://example.com" not in captured.out
     assert "Summary:" not in captured.out
-
 
 
 def test_main_fail_fast_stops_after_first_failure(monkeypatch):
@@ -171,11 +191,14 @@ def test_main_fail_fast_stops_after_first_failure(monkeypatch):
             "duration_ms": 100.0,
         }
 
-    monkeypatch.setattr("website_monitor.main.check_url", fake_check_url)
+    monkeypatch.setattr(
+        "website_monitor.main.check_url",
+        fake_check_url,
+    )
     monkeypatch.setattr(
         sys,
         "argv",
-        ["main.py", "bad.com", "good.com", "--fail-fast"]
+        ["main.py", "bad.com", "good.com", "--fail-fast"],
     )
 
     with pytest.raises(SystemExit) as exc:
@@ -183,7 +206,6 @@ def test_main_fail_fast_stops_after_first_failure(monkeypatch):
 
     assert exc.value.code == 1
     assert call_count == 1
-
 
 
 def test_main_uses_threadpool_when_workers_gt_one(monkeypatch):
@@ -212,12 +234,18 @@ def test_main_uses_threadpool_when_workers_gt_one(monkeypatch):
 
             return FakeFuture()
 
-    monkeypatch.setattr("website_monitor.main.ThreadPoolExecutor", FakeExecutor)
-    monkeypatch.setattr("website_monitor.main.as_completed", lambda futures: futures)
+    monkeypatch.setattr(
+        "website_monitor.main.ThreadPoolExecutor",
+        FakeExecutor,
+    )
+    monkeypatch.setattr(
+        "website_monitor.main.as_completed",
+        lambda futures: futures,
+    )
     monkeypatch.setattr(
         sys,
         "argv",
-        ["main.py", "example.com", "--workers", "2"]
+        ["main.py", "example.com", "--workers", "2"],
     )
 
     with pytest.raises(SystemExit) as exc:

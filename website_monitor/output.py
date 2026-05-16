@@ -4,7 +4,7 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 
-def print_result(result, quiet=False):
+def print_result(result, quiet=False) -> None:
     url = result["url"]
     label = result["label"]
     status_code = result["status_code"]
@@ -24,6 +24,13 @@ def print_result(result, quiet=False):
         color = RED
 
     if status_code is not None:
-        print(f"{url} -> {color}{label} {status_code}{RESET} ({duration_ms:.2f} ms)")
+        print(
+            f"{url} -> {color}{label} "
+            f"{status_code}{RESET} "
+            f"({duration_ms:.2f} ms)"
+        )
     else:
-        print(f"{url} -> {color}{label}{RESET} ({duration_ms:.2f} ms)")
+        print(
+            f"{url} -> {color}{label}{RESET} "
+            f"({duration_ms:.2f} ms)"
+        )

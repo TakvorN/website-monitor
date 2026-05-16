@@ -1,26 +1,49 @@
-import requests
 import time
 
+import requests
 
-def check_url(session, url: str, timeout: float, retries: int, slow_threshold: float, follow_redirects, json_output, quiet, user_agent) -> None:
+
+def check_url(
+    session,
+    url: str,
+    timeout: float,
+    retries: int,
+    slow_threshold: float,
+    follow_redirects: bool,
+    json_output: bool,
+    quiet: bool,
+    user_agent: str,
+) -> dict[str, object]:
+    # Normalize bare domains like "example.com".
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
+    # Retry transient failures such as timeouts or connection drops.
     for attempt in range(1, retries + 1):
         if not json_output and not quiet:
             print(f"Checking {url} ({attempt}/{retries})...")
+
         start = time.perf_counter()
 
         try:
             headers = {
-    "User-Agent": user_agent,
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Connection": "keep-alive",
-}
-            response = session.get(url, timeout=timeout, allow_redirects=follow_redirects, headers=headers)
+                "User-Agent": user_agent,
+                "Accept": (
+                    "text/html,application/xhtml+xml,"
+                    "application/xml;q=0.9,*/*;q=0.8"
+                ),
+                "Accept-Language": "en-US,en;q=0.5",
+                "Connection": "keep-alive",
+            }
+
+            response = session.get(
+                url,
+                timeout=timeout,
+                allow_redirects=follow_redirects,
+                headers=headers,
+            )
             status_code = response.status_code
-            
+
         except requests.exceptions.Timeout:
             label = "TIMEOUT"
 
@@ -28,7 +51,6 @@ def check_url(session, url: str, timeout: float, retries: int, slow_threshold: f
             label = "SSL_ERROR"
 
         except requests.exceptions.ConnectionError as e:
-
             if "NameResolutionError" in str(e):
                 label = "DNS_ERROR"
             else:
@@ -37,10 +59,13 @@ def check_url(session, url: str, timeout: float, retries: int, slow_threshold: f
         except requests.exceptions.RequestException:
             label = "ERROR"
 
-        else:    
+        else:
             end = time.perf_counter()
             duration_ms = (end - start) * 1000
-            is_slow = slow_threshold is not None and duration_ms > slow_threshold
+            is_slow = (
+                slow_threshold is not None
+                and duration_ms > slow_threshold
+            )
 
             if 200 <= status_code < 300:
                 label = "OK"
@@ -60,8 +85,7 @@ def check_url(session, url: str, timeout: float, retries: int, slow_threshold: f
                 "status_code": status_code,
                 "duration_ms": round(duration_ms, 2),
             }
-        
-          
+
         if attempt == retries:
             end = time.perf_counter()
             duration_ms = (end - start) * 1000
@@ -73,5 +97,4 @@ def check_url(session, url: str, timeout: float, retries: int, slow_threshold: f
                 "duration_ms": round(duration_ms, 2),
             }
 
-        else:
-            time.sleep(0.5)
+        time.sleep(0.5)

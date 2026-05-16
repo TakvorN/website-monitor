@@ -34,7 +34,6 @@ def test_print_result_normal_output(capsys):
     assert "123.45" in captured.out
 
 
-
 def test_print_result_without_status_code(capsys):
     result = {
         "url": "https://example.com",
