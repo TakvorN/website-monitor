@@ -21,7 +21,7 @@ Simple Python command-line tool for monitoring website availability and response
 Clone the repository:
 
 ```bash
-git clone <your-github-url>
+git clone https://github.com/TakvorN/website-monitor.git
 cd website-monitor
 ```
 
