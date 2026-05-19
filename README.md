@@ -1,4 +1,6 @@
-# Website Monitor CLI
+# Website Monitor
+
+[![Tests](https://github.com/TakvorN/website-monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/TakvorN/website-monitor/actions/workflows/tests.yml)
 
 Simple Python command-line tool for monitoring website availability and response time.
 
