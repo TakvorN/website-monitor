@@ -87,6 +87,10 @@ ERRORS: 0
 TOTAL: 1
 ```
 
+## Demo
+
+![CLI demo](docs/demo.png)
+
 ## Running Tests
 
 Run the test suite with:
