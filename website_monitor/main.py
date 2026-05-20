@@ -1,13 +1,15 @@
-import argparse
 import json
 import sys
-from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
 from .checker import check_url
 from .output import print_result
+from .build_parser import build_parser
+from .load_urls import load_urls
+from .print_summary import print_summary
+
 
 
 DEFAULT_USER_AGENT = (
@@ -18,50 +20,7 @@ DEFAULT_USER_AGENT = (
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Simple website availability monitor"
-    )
-
-    parser.add_argument("urls", nargs="*")
-    parser.add_argument("--timeout", type=float, default=10)
-    parser.add_argument("--retries", type=int, default=1)
-    parser.add_argument("--slow", type=float, default=None)
-    parser.add_argument("--follow-redirects", action="store_true")
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output results as JSON",
-    )
-    parser.add_argument(
-        "--file",
-        help="Read URLs from file (one per line)",
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Print only result labels",
-    )
-    parser.add_argument(
-        "--fail-fast",
-        action="store_true",
-        help="Stop on first failure",
-    )
-    parser.add_argument(
-        "--output",
-        help="Write results to JSON file",
-    )
-    parser.add_argument(
-        "--user-agent",
-        help="Custom User-Agent header",
-    )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=1,
-        help="Number of concurrent workers (default: 1)",
-    )
-
-    args = parser.parse_args()
+    args = build_parser().parse_args()
 
     # Reuse HTTP connections instead of opening a new one per request.
     session = requests.Session()
@@ -75,28 +34,13 @@ def main() -> None:
     if workers > 1 and args.fail_fast:
         print("WARNING: --fail-fast ignored when using --workers > 1")
 
-    urls = []
-    user_agent = args.user_agent or DEFAULT_USER_AGENT
-
-    if args.urls:
-        urls.extend(args.urls)
-
-    if args.file:
-        with open(args.file) as f:
-            for line in f:
-                line = line.strip()
-
-                if not line:
-                    continue
-
-                if line.startswith("#"):
-                    continue
-
-                urls.append(line)
+    urls = load_urls(args)
 
     if not urls:
         print("No URLs provided")
         sys.exit(2)
+    
+    user_agent = args.user_agent or DEFAULT_USER_AGENT
 
     timeout = args.timeout
     retries = args.retries
@@ -163,25 +107,7 @@ def main() -> None:
         print(json.dumps(all_results, indent=2))
 
     elif not args.quiet:
-        print("\nSummary:")
-
-        counts = Counter(result["label"] for result in all_results)
-
-        print(f"OK: {counts['OK']}")
-        print(f"REDIRECT: {counts['REDIRECT']}")
-        print(f"CLIENT_ERROR: {counts['CLIENT_ERROR']}")
-        print(f"SERVER_ERROR: {counts['SERVER_ERROR']}")
-
-        errors = (
-            counts["TIMEOUT"]
-            + counts["DNS_ERROR"]
-            + counts["SSL_ERROR"]
-            + counts["CONNECTION_ERROR"]
-            + counts["ERROR"]
-        )
-
-        print(f"ERRORS: {errors}")
-        print(f"TOTAL: {len(all_results)}")
+        print_summary(all_results)
 
     if args.output:
         with open(args.output, "w") as f:
